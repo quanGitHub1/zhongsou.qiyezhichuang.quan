@@ -1,0 +1,51 @@
+//首先获取版本号
+    if(jsonObject && [jsonObject isKindOfClass:[NSDictionary class]]){
+        
+        
+        // 写一个线程来处理数据让其不在主线程中操作
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^{
+            // 进行数据处理操作
+            
+            
+            NSUserDefaults *versionStand = [NSUserDefaults standardUserDefaults];
+            
+            // 获取数据版本号
+            NSString *netVersion = [jsonObject stringForKey:@"version"];
+            
+            // 第一次的版本号为空就存起来，
+            if ([[versionStand valueForKey:@"TFVersion"] isEqualToString:@""] || [[versionStand valueForKey:@"TFVersion"] floatValue] != [netVersion floatValue]) {
+            
+                
+                // 先把取出的数据转成nsdata存起来，不然的话存的是一个plist的格式（如果有空字段就存不上去）
+                
+                NSData *jsonData = [NSJSONSerialization dataWithJSONObject:jsonObject options:(NSJSONWritingPrettyPrinted) error:nil];
+                
+                
+                // 把获取的版本号存起来
+                [versionStand setValue:netVersion forKey:@"TFVersion"];
+                [versionStand synchronize];
+                
+                
+                NSFileManager *fileManager = [NSFileManager defaultManager];
+                
+                [fileManager removeItemAtPath:kAppsCachePath error:nil];
+                
+                if (![fileManager fileExistsAtPath:kAppsCachePath]) {
+                    
+                    [fileManager createFileAtPath:kAppsCachePath contents:nil attributes:[NSDictionary dictionary]];//创建一个dictionary文件
+                    
+                }
+                
+                
+                // 把获取到的文件给存取起来
+                [jsonData writeToFile:kAppsCachePath atomically:YES];
+                
+                // 刷新单例中的数据
+                
+                [[TFMailListHandle shareMailList] getMailListArry];
+                [[TFMailListHandle shareMailList]  getDepartMentArry];
+                
+            }
+
+        });
+    }
